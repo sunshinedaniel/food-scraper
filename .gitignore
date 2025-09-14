@@ -1,0 +1,16 @@
+# Node
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local environment variables
+.env
+
+# Logs and reports
+logs
+playwright-report/
+test-results/
+
+# Playwright
+/playwright/.cache/
