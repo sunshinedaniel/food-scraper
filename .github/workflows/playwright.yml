@@ -37,6 +37,8 @@ jobs:
       env:
         DLS_USERNAME: ${{ secrets.DLS_USERNAME }}
         DLS_PASSWORD: ${{ secrets.DLS_PASSWORD }}
+        GFB_USERNAME: ${{ secrets.GFB_USERNAME }}
+        GFB_PASSWORD: ${{ secrets.GFB_PASSWORD }}
 
     - name: Create docs directory and move file
       run: |
