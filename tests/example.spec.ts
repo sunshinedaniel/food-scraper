@@ -85,7 +85,7 @@ test.afterAll(async () => {
     const logFilePath = path.join(logsDir, 'ordered_meals_kurt.json');
 
     if (orderedMeals.length === 0) {
-        console.log('No ordered meals found, skipping file creation and Google Drive upload.');
+        console.log('No ordered meals found, skipping file creation.');
         return;
     }
 
