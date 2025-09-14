@@ -47,8 +47,19 @@ test('Grab food schedule DLS', async ({page}) => {
                                             const dishName = meal.dish.dishDescription.textSections.map(
                                                 section => section.text === 'NK' ? ' (Bio)' : section.text
                                             ).join('');
+
+                                            const deliveryDate = new Date(foodDay.deliveryDate);
+                                            // Formatiert das Datum für die Zeitzone Europe/Berlin im Format JJJJ-MM-TT.
+                                            // Die Locale 'sv-SE' (Schweden) wird verwendet, da sie standardmäßig dieses Format erzeugt.
+                                            const formattedDate = new Intl.DateTimeFormat('sv-SE', {
+                                                timeZone: 'Europe/Berlin',
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit'
+                                            }).format(deliveryDate);
+
                                             dlsOrderedMeals.push({
-                                                date: new Date(foodDay.deliveryDate).toLocaleDateString('de'),
+                                                date: formattedDate,
                                                 dish: dishName
                                             });
                                         }
