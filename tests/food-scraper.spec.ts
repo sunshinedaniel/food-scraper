@@ -44,9 +44,12 @@ test('Grab food schedule DLS', async ({page}) => {
                                 if (mealsGroup.meals) {
                                     for (const meal of mealsGroup.meals) {
                                         if (meal.dish && meal.dish.ordered === true) {
+                                            const dishName = meal.dish.dishDescription.textSections.map(
+                                                section => section.text === 'NK' ? ' (Bio)' : section.text
+                                            ).join('');
                                             dlsOrderedMeals.push({
-                                                date: foodDay.deliveryDate.split('T')[0],
-                                                dish: meal.dish.name
+                                                date: new Date(foodDay.deliveryDate).toLocaleDateString('de'),
+                                                dish: dishName
                                             });
                                         }
                                     }

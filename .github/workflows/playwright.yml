@@ -43,7 +43,7 @@ jobs:
     - name: Create docs directory and move file
       run: |
         mkdir -p docs
-        mv logs/ordered_meals.json docs/
+        cp logs/ordered_meals.json docs/
 
     - name: Upload artifact for GitHub Pages
       uses: actions/upload-pages-artifact@v3

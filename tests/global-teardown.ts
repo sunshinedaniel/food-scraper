@@ -12,7 +12,6 @@ async function globalTeardown() {
     if (fs.existsSync(dlsLogPath)) {
         try {
             dlsOrderedMeals = JSON.parse(fs.readFileSync(dlsLogPath, 'utf-8'));
-            fs.unlinkSync(dlsLogPath);
         } catch (e) {
             console.error(`Error processing ${dlsLogPath}:`, e);
         }
@@ -21,7 +20,6 @@ async function globalTeardown() {
     if (fs.existsSync(gfbLogPath)) {
         try {
             gfbOrderedMeals = JSON.parse(fs.readFileSync(gfbLogPath, 'utf-8'));
-            fs.unlinkSync(gfbLogPath);
         } catch (e) {
             console.error(`Error processing ${gfbLogPath}:`, e);
         }
