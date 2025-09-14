@@ -6,16 +6,26 @@ import * as dotenv from 'dotenv';
 // Lade Umgebungsvariablen aus der .env-Datei für lokale Tests
 dotenv.config();
 
-let orderedMeals: { deliveryDate: string, dish: string }[] = [];
-
 test.beforeAll(() => {
     const logsDir = path.join(__dirname, '..', 'logs');
     if (!fs.existsSync(logsDir)) {
-        fs.mkdirSync(logsDir, { recursive: true });
+        fs.mkdirSync(logsDir, {recursive: true});
     }
 });
 
-test('Grab food schedule', async ({page}) => {
+function cleanDishText(text: string): string {
+    return text
+        .replace(/\[h].*?\[\/h]/g, '') // [h]...[/h] und Inhalt entfernen
+        .replace(/\[br]/g, ' ')          // [br] durch Leerzeichen ersetzen
+        .replace(/\[\/?b]/g, '')         // [b] und [/b] Tags entfernen
+        .replace(/"/g, '')               // Anführungszeichen entfernen
+        .replace(/,\s*$/, '')            // Komma am Ende entfernen
+        .replace(/\s+/g, ' ')            // Mehrfache Leerzeichen durch ein einzelnes ersetzen
+        .trim();                         // Führende/nachfolgende Leerzeichen entfernen
+}
+
+test('Grab food schedule DLS', async ({page}) => {
+    const dlsOrderedMeals: { date: string, dish: string }[] = [];
     page.on('websocket', ws => {
         ws.on('framereceived', event => {
             const payloadString = event.payload.toString();
@@ -34,7 +44,10 @@ test('Grab food schedule', async ({page}) => {
                                 if (mealsGroup.meals) {
                                     for (const meal of mealsGroup.meals) {
                                         if (meal.dish && meal.dish.ordered === true) {
-                                            orderedMeals.push({ deliveryDate: foodDay.deliveryDate, dish: meal.dish.name });
+                                            dlsOrderedMeals.push({
+                                                date: foodDay.deliveryDate.split('T')[0],
+                                                dish: meal.dish.name
+                                            });
                                         }
                                     }
                                 }
@@ -76,24 +89,76 @@ test('Grab food schedule', async ({page}) => {
 
     await page.waitForURL('**/food');
 
-
-
+    if (dlsOrderedMeals.length > 0) {
+        const logsDir = path.join(__dirname, '..', 'logs');
+        const logFilePath = path.join(logsDir, 'dls_ordered_meals.json');
+        fs.writeFileSync(logFilePath, JSON.stringify(dlsOrderedMeals, null, 2));
+    }
 });
 
-test.afterAll(async () => {
-    const logsDir = path.join(__dirname, '..', 'logs');
-    const logFilePath = path.join(logsDir, 'ordered_meals_kurt.json');
+test('Grab food schedule GFB', async ({page}) => {
+    const gfbOrderedMeals: { date: string, dish: string }[] = [];
+    page.on('response', async (response) => {
+        if (response.url() === 'https://proxy.mms-rcs.de/call' && response.request().method() === 'POST') {
+            const body = await response.text();
+            if (body.includes('"mengeAlt"')) {
+                try {
+                    const jsonResponse = await response.json();
+                    const content = jsonResponse.content;
+                    if (!content || !content.kunden || !content.menuetexte) {
+                        return;
+                    }
 
-    if (orderedMeals.length === 0) {
-        console.log('No ordered meals found, skipping file creation.');
-        return;
+                    const kundenKeys = Object.keys(content.kunden);
+                    if (kundenKeys.length === 0) {
+                        return;
+                    }
+                    const kunde = content.kunden[kundenKeys[0]];
+
+                    if (kunde && kunde.tage) {
+                        for (const tagKey in kunde.tage) {
+                            const tag = kunde.tage[tagKey];
+                            if (tag.bestellMenues) {
+                                for (const menueKey in tag.bestellMenues) {
+                                    const menue = tag.bestellMenues[menueKey];
+                                    if (menue.mengeAlt > 0) {
+                                        const menueText = content.menuetexte[menue.menueTextId];
+                                        if (menueText) {
+                                            gfbOrderedMeals.push({
+                                                date: tag.datum,
+                                                dish: cleanDishText(menueText.text)
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing or processing GFB response:', e);
+                }
+            }
+        }
+    });
+
+    await page.goto('https://bestellung-gfb-catering.de/#/speiseplan-kunde');
+
+    // Fill in login form from environment variables
+    if (!process.env.GFB_USERNAME || !process.env.GFB_PASSWORD) {
+        throw new Error('GFB_USERNAME and GFB_PASSWORD environment variables must be set.');
     }
+    await page.locator('#benutzername').fill(process.env.GFB_USERNAME);
+    await page.locator('#passwort').fill(process.env.GFB_PASSWORD);
+    await page.locator('button.btn-login').click();
 
-    const outputJson = {
-        kurt: orderedMeals
-    };
+    await page.waitForTimeout(2000);
 
-    fs.writeFileSync(logFilePath, JSON.stringify(outputJson, null, 2));
-    console.log(`Ordered meals saved to ${logFilePath}`);
-    console.log(`Content of the file: ${JSON.stringify(outputJson, null, 2)}`);
+    await page.locator('mat-icon[aria-label="Zeitpunkt Vor"]').click();
+    await page.waitForTimeout(2000);
+
+    if (gfbOrderedMeals.length > 0) {
+        const logsDir = path.join(__dirname, '..', 'logs');
+        const logFilePath = path.join(logsDir, 'gfb_ordered_meals.json');
+        fs.writeFileSync(logFilePath, JSON.stringify(gfbOrderedMeals, null, 2));
+    }
 });

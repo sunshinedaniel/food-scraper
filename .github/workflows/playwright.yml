@@ -41,7 +41,7 @@ jobs:
     - name: Create docs directory and move file
       run: |
         mkdir -p docs
-        mv logs/ordered_meals_kurt.json docs/
+        mv logs/ordered_meals.json docs/
 
     - name: Upload artifact for GitHub Pages
       uses: actions/upload-pages-artifact@v3
@@ -59,7 +59,7 @@ jobs:
       if: always()
       with:
         name: ordered-meals
-        path: logs/ordered_meals_kurt.json
+        path: logs/ordered_meals.json
         retention-days: 30
 
   deploy:
